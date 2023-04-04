@@ -1,73 +1,168 @@
-import tkinter as tk
+import pygame
 import random
-
-MOVE_INCREMENT = 10
-MOVES_PER_SECOND = 8
-GAME_SPEED = 1000 // MOVES_PER_SECOND
-
-WIDTH = 500
-HEIGHT = 500
+import time
 
 
-def start_game():
-    global snake, apple, score
-    score = 0
+pygame.init()
 
-# Создаем змею и яблоко
-snake = Snake()
-apple = Apple()
+# создание окна
+screen_width = 500
+screen_height = 500
+game_display = pygame.display.set_mode((screen_width, screen_height))
+pygame.display.set_caption('Snake game')
 
-# Главный игровой цикл
-def main():
-    global score
-    # Проверяем, не столкнулась ли змея с препятствием или с собственным телом
-    if snake.check_collision() == True:
-        messagebox.showinfo("Game Over", f"Your score is {score}")
-        answer = messagebox.askquestion("Game Over", "Do you want to play again?")
-        if answer == "yes":
-            # Если пользователь хочет начать новую игру, перезагружаем игру
-            snake.restart()
-            apple.new_position()
-            main()
-        else:
-            # Если пользователь не хочет играть, закрываем окно
-            root.destroy()
-    else:
-        # Если змея не столкнулась с препятствием или с собственным телом, продолжаем игру
-        snake.move()
-        if snake.eat_apple(apple):
-            # Если змея съела яблоко, обновляем позицию яблока и увеличиваем счет
-            apple.new_position()
-            score += 1
-            score_label.config(text="Score: " + str(score))
-        canvas.delete("all")
-        snake.draw(canvas)
-        apple.draw(canvas)
-        root.after(100, main)
+# цвета
+white = (255, 255, 255)
+black = (0, 0, 0)
+red = (255, 0, 0)
+green = (0, 155, 0)
 
-# Обработка нажатий клавиш
-def on_key_press(event):
-    snake.change_direction(event.keysym)
+# фоновый цвет
+bg_color = white
 
-# Создание окна и элементов управления
-root = tk.Tk()
-root.title("Snake")
-root.resizable(False, False)
+# размер блока
+block_size = 10
 
-canvas = tk.Canvas(root, width=500, height=500, bg="#003300")
-canvas.pack()
+# настройки змейки
+snake_speed = 15
 
-score_label = tk.Label(root, text="Score: " + str(score), font=("Arial", 16))
-score_label.pack()
 
-reset_button = tk.Button(root, text="Reset Score", font=("Arial", 16), command=reset_score)
-reset_button.pack()
 
-start_button = tk.Button(root, text="Start Game", font=("Arial", 16), command=main)
-start_button.pack()
 
-# Привязка обработчика событий к клавиатуре
-root.bind("<KeyPress>", on_key_press)
+class Snake:
+    def __init__(self, x, y, size):
+        self.x = x
+        self.y = y
+        self.size = size
+        self.direction = "right"
+        self.update_snake_position = []
 
-root.mainloop()
+    def draw(self):
+        for block in self.update_snake_position:
+            pygame.draw.rect(game_display, black, [block[0], block[1], self.size, self.size])
+
+    def update(self):
+        if self.direction == "right":
+            self.x += self.size
+        elif self.direction == "left":
+            self.x -= self.size
+        elif self.direction == "up":
+            self.y -= self.size
+        elif self.direction == "down":
+            self.y += self.size
+
+        self.update_snake_position.append([self.x, self.y])
+
+        if len(self.update_snake_position) > snake_length:
+            del self.update_snake_position[0]
+
+    def check_collision(self):
+        for block in self.update_snake_position[:-1]:
+            if block == [self.x, self.y]:
+                return True
+        if self.x >= screen_width or self.x < 0 or self.y >= screen_height or self.y < 0:
+            return True
+        return False
+
+class Apple:
+    def __init__(self, size):
+        self.size = size
+        self.x = round(random.randrange(0, screen_width - self.size) / 10.0) * 10.0
+        self.y = round(random.randrange(0, screen_height - self.size) / 10.0) * 10.0
+
+    def draw(self):
+        pygame.draw.rect(game_display, red, [self.x, self.y, self.size, self.size])
+
+    def update(self):
+        self.x = round(random.randrange(0, screen_width - self.size) / 10.0) * 10.0
+        self.y = round(random.randrange(0, screen_height - self.size) / 10.0) * 10.0
+
+
+def score_system(score):
+    value = pygame.font.SysFont("arial", 25).render("Score: " + str(score), True, black)
+    game_display.blit(value, [0, 0])
+
+# инициализация змейки и яблока
+snake_length = 1
+snake = Snake(0, 0, block_size)
+apple = Apple(block_size)
+
+# основной игровой цикл
+game_over = False
+game_close = False
+
+while not game_over:
+
+    while game_close == True:
+        game_display.fill(bg_color)
+        message = pygame.font.SysFont("arial", 30).render("You lost! Press Q to Quit or C to Play Again", True, black)
+        message_rect = message.get_rect()
+        message_rect.center = (screen_width / 2, screen_height / 2)
+        game_display.blit(message_surface, message_rect)
+
+        pygame.display.update()
+
+        # Задержка перед завершением программы
+        pygame.time.wait(3000)
+
+        # Закрываем окно игры и завершаем работу Pygame
+        pygame.quit()
+        quit()
+
+# Основной игровой цикл
+game_exit = False
+while not game_exit:
+# тело цикла
+    while not game_exit:
+
+        # Обработка событий
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                game_exit = True
+
+            # Обработка нажатий клавиш
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_LEFT:
+                    snake.change_direction("LEFT")
+                elif event.key == pygame.K_RIGHT:
+                    snake.change_direction("RIGHT")
+                elif event.key == pygame.K_UP:
+                    snake.change_direction("UP")
+                elif event.key == pygame.K_DOWN:
+                    snake.change_direction("DOWN")
+
+        # Рисуем фон
+        game_display.fill(bg_color)
+
+        # Рисуем яблоко
+        apple.draw(game_display)
+
+        # Обновляем змею
+        snake.update()
+
+        # Проверяем столкновение змеи с яблоком
+        if snake.check_collision(apple):
+            apple.move()
+            snake.grow()
+            score += 10
+
+        # Рисуем змею
+        snake.draw(game_display)
+
+        # Рисуем счетчик очков
+        score_surface = font.render("Score: " + str(score), True, font_color)
+        game_display.blit(score_surface, (10, 10))
+
+        # Обновляем экран
+        pygame.display.update()
+
+        # Устанавливаем задержку
+        clock.tick(10)
+
+    # Закрываем окно игры и завершаем работу Pygame
+    pygame.quit()
+    quit()
+
+# Запускаем игру
+game_loop()
 
